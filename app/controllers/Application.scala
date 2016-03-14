@@ -1,6 +1,6 @@
 package controllers
 
-import com.imaginea.{JsonUtils, TermWithCounts, MasterApp}
+import com.imaginea.{EsUtils, JsonUtils, TermWithCounts, MasterApp}
 import play.api.mvc._
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -15,8 +15,10 @@ object Application extends Controller {
     println("Content : " + request.body.toString())
     val json = request.body.asJson.get
     val days = json \ "days"
-    val terms = json \ "terms"
-    val finalFuture = MasterApp.process(terms.as[List[String]], days.as[String])
+    val terms = (json \ "terms").as[List[String]]
+
+    val termToBeUpdated = EsUtils.shouldIndex(terms)
+    val finalFuture = MasterApp.process(termToBeUpdated, days.as[String])
     val list  = Await.result(finalFuture, 50 minutes)
     println("got result  " + list)
     Ok(JsonUtils.toJson(TermWithCounts(list)))

@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object MasterApp {
-implicit val timeout = Timeout(5 minutes)
+implicit val timeout = Timeout(50 minutes)
 
   def configString = s"""akka {
                         |  actor {
@@ -34,26 +34,11 @@ implicit val timeout = Timeout(5 minutes)
   val paths = ips.map(getRemoteActorPath(_)).toList
   val remoteRouter: ActorRef =
     actorSystem.actorOf(RoundRobinGroup(paths).props())
-  def process(terms: List[String], days: String) =  {
-//    val aggregator: ActorRef = actorSystem.actorOf(Props(classOf[Aggregator], remoteRouter))
+  def process(terms: List[(String, String)], days: String) =  {
     val future = terms.map(term => (remoteRouter ? QueryTwitter(term, days)).mapTo[TermWithCount])
     Future.sequence(future)
   }
 
   def getRemoteActorPath(ip: String) = s"akka.tcp://twitter@$ip:2552/user/router"
-}
 
-class Aggregator(remoteRouter: ActorRef) extends Actor {
-  var sendCount = 0
-  var receiveCount = 0
-  var termWithCountList = List[TermWithCount]()
-  def receive: Receive = {
-    case (term: String, days: String) => remoteRouter ! QueryTwitter(term, days)
-      sendCount = sendCount + 1
-    case TermWithCount(term, tweetCount) => receiveCount = receiveCount + 1
-      termWithCountList = termWithCountList ++ List(TermWithCount(term, tweetCount))
-      if (receiveCount == sendCount) {
-        JsonUtils .toJson(TermWithCounts(termWithCountList))
-      }
-  }
 }
