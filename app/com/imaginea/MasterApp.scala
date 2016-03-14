@@ -4,9 +4,15 @@ import java.net.InetAddress
 
 import akka.actor._
 import akka.routing.RoundRobinGroup
+import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
+import scala.concurrent.Future
+import akka.pattern.ask
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object MasterApp {
+implicit val timeout = Timeout(5 minutes)
 
   def configString = s"""akka {
                         |  actor {
@@ -16,46 +22,38 @@ object MasterApp {
                         |    enabled-transports = ["akka.remote.netty.tcp"]
                         |    netty.tcp {
                         |      hostname = ${InetAddress.getLocalHost.getHostAddress()}
-                        |      port = 2554
+                        |      port = 0
                         |    }
                         |  }
                         |}""".stripMargin
 
   val config = ConfigFactory.parseString(configString)
   val actorSystem = ActorSystem("twitter", config)
-
-  def process(terms: List[String], days: String) {
-    val config = ConfigFactory.load("querySearch.conf")
-    val ips = config.getString("remoteIps").split(",")
-    val paths = ips.map(getRemoteActorPath(_)).toList
-    val remoteRouter: ActorRef =
-      actorSystem.actorOf(RoundRobinGroup(paths).props())
-    val aggregator: ActorRef = actorSystem.actorOf(Props(classOf[Aggregator], remoteRouter))
-    terms.foreach(term => aggregator ! (term, days))
+  val querySearchConfig = ConfigFactory.load("querySearch.conf")
+  val ips = querySearchConfig.getString("remoteIps").split(",")
+  val paths = ips.map(getRemoteActorPath(_)).toList
+  val remoteRouter: ActorRef =
+    actorSystem.actorOf(RoundRobinGroup(paths).props())
+  def process(terms: List[String], days: String) =  {
+//    val aggregator: ActorRef = actorSystem.actorOf(Props(classOf[Aggregator], remoteRouter))
+    val future = terms.map(term => (remoteRouter ? QueryTwitter(term, days)).mapTo[TermWithCount])
+    Future.sequence(future)
   }
+
   def getRemoteActorPath(ip: String) = s"akka.tcp://twitter@$ip:2552/user/router"
 }
 
 class Aggregator(remoteRouter: ActorRef) extends Actor {
   var sendCount = 0
   var receiveCount = 0
-  val termWithCountMap = scala.collection.mutable.Map[String, Int]()
-
+  var termWithCountList = List[TermWithCount]()
   def receive: Receive = {
-    case (term: String, days: String)=> remoteRouter ! QueryTwitter(term, days, self)
+    case (term: String, days: String) => remoteRouter ! QueryTwitter(term, days)
       sendCount = sendCount + 1
     case TermWithCount(term, tweetCount) => receiveCount = receiveCount + 1
-      termWithCountMap.put(term, tweetCount)
+      termWithCountList = termWithCountList ++ List(TermWithCount(term, tweetCount))
       if (receiveCount == sendCount) {
-        QuerySearch.toJson(Terms(termWithCountMap))
-        println("done")
-        self ! PoisonPill
-        remoteRouter ! PoisonPill
-        /* Launcher.runSparkJob("/opt/software/spark-1.3.1-bin-hadoop2.6/",
-           "/opt/sentiment-assembly-1.0.jar",
-           "com.imaginea.SentimentAnalysis", "spark://HadoopMaster:7077")*/
+        JsonUtils .toJson(TermWithCounts(termWithCountList))
       }
   }
 }
-
-case class Terms(analyzedTerms: scala.collection.mutable.Map[String, Int])

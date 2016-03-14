@@ -45,11 +45,11 @@ object QuerySearch extends TwitterInstance {
   val client = transportClient.addTransportAddress(new InetSocketTransportAddress(esHost, esport))
     val config = ConfigFactory.parseString(configString)
   val actorSystem = ActorSystem("twitter", config)
+  val router: ActorRef =
+    actorSystem.actorOf(RoundRobinPool(2 *
+      Runtime.getRuntime.availableProcessors()).props(Props[TwitterQueryFetcher]), "router")
 
   def main(args: Array[String]): Unit = {
-    val router: ActorRef =
-      actorSystem.actorOf(RoundRobinPool(2 *
-        Runtime.getRuntime.availableProcessors()).props(Props[TwitterQueryFetcher]), "router")
   }
 
   def fetchAndSaveTweets(term: String, days: String): TermWithCount = {
@@ -81,22 +81,25 @@ object QuerySearch extends TwitterInstance {
     TermWithCount(term, tweetCount)
   }
 
+}
+
+case class QueryTwitter(term: String , days: String)
+case class TermWithCount(term: String, count: Int)
+case class TermWithCounts(terms : List[TermWithCount])
+
+class TwitterQueryFetcher extends Actor {
+  override def receive: Receive = {
+    case QueryTwitter(term, days) =>
+      sender ! QuerySearch.fetchAndSaveTweets(term, days)
+  }
+}
+
+object JsonUtils {
   def toJson[T <: AnyRef <% Product with Serializable](t: T): String = {
     import org.json4s._
     import org.json4s.jackson.Serialization
     import org.json4s.jackson.Serialization.write
     implicit val formats = Serialization.formats(NoTypeHints)
     write(t)
-  }
-}
-
-
-case class QueryTwitter(term: String , days: String, actorRef: ActorRef)
-case class TermWithCount(term: String, count: Int)
-
-class TwitterQueryFetcher extends Actor {
-  override def receive: Receive = {
-    case QueryTwitter(term, days, actor) =>
-      actor ! QuerySearch.fetchAndSaveTweets(term, days)
   }
 }
