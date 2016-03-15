@@ -1,8 +1,8 @@
 package com.imaginea
 
 import java.net.InetAddress
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.text.{ParseException, SimpleDateFormat}
+import java.util.{Locale, Date}
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
@@ -28,8 +28,19 @@ trait TwitterInstance {
 
 
 object QuerySearch extends TwitterInstance {
-  def configString =
-    s"""akka {|  actor {|    provider = "akka.remote.RemoteActorRefProvider"|  }|  remote {|    enabled-transports = ["akka.remote.netty.tcp"]|    netty.tcp {|      hostname = ${InetAddress.getLocalHost.getHostAddress()}|      port = 2552|    }|  }|}""".stripMargin
+
+  def configString = s"""akka {
+                        |  actor {
+                        |    provider = "akka.remote.RemoteActorRefProvider"
+                        |  }
+                        |  remote {
+                        |    enabled-transports = ["akka.remote.netty.tcp"]
+                        |    netty.tcp {
+                        |      hostname = ${InetAddress.getLocalHost.getHostAddress()}
+                        |      port = 2552
+                        |    }
+                        |  }
+                        |}""".stripMargin
 
   val config = ConfigFactory.parseString(configString)
   val actorSystem = ActorSystem("twitter", config)
@@ -40,22 +51,20 @@ object QuerySearch extends TwitterInstance {
   def main(args: Array[String]): Unit = {
   }
 
-
-  def fetchAndSaveTweets(terms: (String, String), days: String): TermWithCount = {
-    val (term, since) = terms
-    if (since.isEmpty) {
-      indexTweetedTerms(term, "pending", new Date)
+  def fetchAndSaveTweets(terms: (String, Date, Boolean)): TermWithCount = {
+    val (term, since, isNewTerm) = terms
+    if (isNewTerm) {
+      indexTweetedTerms(term, "pending", since)
     } else {
-      indexTweetedTerms(term, "refreshing", new Date(since))
+        indexTweetedTerms(term, "refreshing", since)
     }
     val bulkRequest = EsUtils.client.prepareBulk()
     var query = new Query(term).lang("en")
     query.setCount(100)
 
-    if (!since.isEmpty) {
-      query.setSince(since)
-    } else {
-      query.setSince(days)
+    if (!isNewTerm) {
+      val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+      query.setSince(sdf.format(since))
     }
 
     var queryResult = twitter.search(query)
@@ -83,7 +92,7 @@ object QuerySearch extends TwitterInstance {
       queryResult = twitter.search(query)
     }
     bulkRequest.execute()
-    if (tweetCount == 0 && since.isEmpty) {
+    if (tweetCount == 0 && isNewTerm) {
       EsUtils.client.prepareDelete("tweetedterms", "typetweetedterms", term).execute()
     } else {
       indexTweetedTerms(term, "done", createdAt)
@@ -93,14 +102,14 @@ object QuerySearch extends TwitterInstance {
   }
 
   def indexTweetedTerms(term: String, status: String, createdAt: Date): UpdateResponse = {
-    val sdf = new SimpleDateFormat("yyyy-MM-dd")
+    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     val indexRequest = new IndexRequest("tweetedterms", "typetweetedterms", term).source(JsonUtils.toJson(TweetedTerms(term, status, sdf.format(new Date), sdf.format(createdAt))))
     val updateRequest = new UpdateRequest("tweetedterms", "typetweetedterms", term).doc(JsonUtils.toJson(TweetedTerms(term, status, sdf.format(new Date), sdf.format(createdAt)))).upsert(indexRequest)
     EsUtils.client.update(updateRequest).get()
   }
 }
 
-case class QueryTwitter(term: (String, String), days: String)
+case class QueryTwitter(term: (String, Date, Boolean))
 
 case class TermWithCount(term: String, count: Int)
 
@@ -110,8 +119,8 @@ case class TweetedTerms(searchTerm: String, queryStatus: String, lastUpdated: St
 
 class TwitterQueryFetcher extends Actor {
   override def receive: Receive = {
-    case QueryTwitter(term, days) =>
-      sender ! QuerySearch.fetchAndSaveTweets(term, days)
+    case QueryTwitter(term) =>
+      sender ! QuerySearch.fetchAndSaveTweets(term)
   }
 }
 
@@ -151,23 +160,50 @@ object EsUtils {
     finalList
   }
 
-  def shouldIndex(term: List[String]): List[(String, String)] = {
+
+  def convertToDate(dateString: String) = {
+    val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
+    format.parse(dateString);
+  }
+
+
+  def shouldIndex2(term: List[String]): List[(String, Date, Boolean)] = {
     import scala.collection.JavaConverters._
     var finalList = term
     import org.elasticsearch.action.search.SearchType;
     import org.elasticsearch.index.query.QueryBuilders
     val queryRequest = client.prepareSearch("tweetedterms").
       setSearchType(SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termsQuery("searchTerm", term.asJava))
-//    println(queryRequest.toString)
     val response = queryRequest.execute.actionGet
     val terms = response.getHits.getHits.map { hit =>
-      finalList = finalList.drop(term.indexOf(hit.getSource.get("SearchTerm").asInstanceOf[String]))
-      println("finalList : " + finalList)
+      finalList = finalList diff List(hit.getSource.get("searchTerm").asInstanceOf[String])
+      // println(hit.getSource.get("searchTerm").asInstanceOf[String] + " :: MAPPING :: " +
+      //  hit.getSource.get("since").asInstanceOf[String])
+      new Date()
+      (hit.getSource.get("searchTerm").asInstanceOf[String],convertToDate(hit.getSource.get("since").asInstanceOf[String]), false)
+    }
+    val a = finalList.map(term => (term, new Date,true)) ++ terms
+    println(a)
+    a
+  }
+
+  def shouldIndex(term: List[String]): List[(String, Date, Boolean)] = {
+    import scala.collection.JavaConverters._
+    var finalList = term
+    import org.elasticsearch.action.search.SearchType;
+    import org.elasticsearch.index.query.QueryBuilders
+    val queryRequest = client.prepareSearch("tweetedterms").
+      setSearchType(SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termsQuery("searchTerm", term.asJava))
+    val response = queryRequest.execute.actionGet
+    val terms = response.getHits.getHits.map { hit =>
+      finalList = finalList diff List(hit.getSource.get("searchTerm").asInstanceOf[String])
      // println(hit.getSource.get("searchTerm").asInstanceOf[String] + " :: MAPPING :: " +
       //  hit.getSource.get("since").asInstanceOf[String])
-      (hit.getSource.get("searchTerm").asInstanceOf[String], hit.getSource.get("since").asInstanceOf[String])
+      new Date()
+      (hit.getSource.get("searchTerm").asInstanceOf[String],
+        convertToDate(hit.getSource.get("since").asInstanceOf[String]), false)
     }
-    val a = finalList.map(term => (term, "")) ++ terms
+    val a = finalList.map(term => (term, new Date,true)) ++ terms
     println(a)
     a
   }

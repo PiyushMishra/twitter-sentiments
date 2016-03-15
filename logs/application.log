@@ -1,9 +1,139 @@
-2016-03-14 12:24:06,031 - [INFO] - from play in pool-4-thread-1 
+2016-03-15 12:57:26,163 - [INFO] - from play in pool-4-thread-5 
 Listening for HTTP on /0:0:0:0:0:0:0:0:9000
 
-2016-03-14 12:26:14,504 - [INFO] - from play in play-internal-execution-context-1 
+2016-03-15 12:57:59,366 - [INFO] - from play in play-internal-execution-context-1 
 Application started (Dev)
 
-2016-03-14 12:30:37,456 - [INFO] - from play in play-internal-execution-context-1 
+2016-03-15 13:03:48,737 - [ERROR] - from application in play-akka.actor.default-dispatcher-3 
+
+
+! @6pdl93aj5 - Internal server error, for (GET) [/analyze/tweet?terms=starbucks&terms=merck] ->
+
+play.api.Application$$anon$1: Execution exception[[ClassCastException: java.lang.String cannot be cast to java.util.Date]]
+	at play.api.Application$class.handleError(Application.scala:296) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.DefaultApplication.handleError(Application.scala:402) [play_2.11-2.3.8.jar:2.3.8]
+	at play.core.server.netty.PlayDefaultUpstreamHandler$$anonfun$14$$anonfun$apply$1.applyOrElse(PlayDefaultUpstreamHandler.scala:205) [play_2.11-2.3.8.jar:2.3.8]
+	at play.core.server.netty.PlayDefaultUpstreamHandler$$anonfun$14$$anonfun$apply$1.applyOrElse(PlayDefaultUpstreamHandler.scala:202) [play_2.11-2.3.8.jar:2.3.8]
+	at scala.runtime.AbstractPartialFunction.apply(AbstractPartialFunction.scala:36) [scala-library-2.11.7.jar:na]
+	at scala.util.Failure$$anonfun$recover$1.apply(Try.scala:216) [scala-library-2.11.7.jar:na]
+	at scala.util.Try$.apply(Try.scala:192) [scala-library-2.11.7.jar:na]
+	at scala.util.Failure.recover(Try.scala:216) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.Future$$anonfun$recover$1.apply(Future.scala:324) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.Future$$anonfun$recover$1.apply(Future.scala:324) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.CallbackRunnable.run(Promise.scala:32) [scala-library-2.11.7.jar:na]
+	at play.api.libs.iteratee.Execution$trampoline$.execute(Execution.scala:46) [play-iteratees_2.11-2.3.8.jar:2.3.8]
+	at scala.concurrent.impl.CallbackRunnable.executeWithValue(Promise.scala:40) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:248) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.Promise$class.complete(Promise.scala:55) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:153) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Future$PromiseCompletingRunnable.run(Future.scala:23) [scala-library-2.11.7.jar:na]
+	at akka.dispatch.TaskInvocation.run(AbstractDispatcher.scala:39) [akka-actor_2.11-2.4.2.jar:na]
+	at akka.dispatch.ForkJoinExecutorConfigurator$AkkaForkJoinTask.exec(AbstractDispatcher.scala:405) [akka-actor_2.11-2.4.2.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinTask.doExec(ForkJoinTask.java:260) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinPool$WorkQueue.runTask(ForkJoinPool.java:1339) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinPool.runWorker(ForkJoinPool.java:1979) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:107) [scala-library-2.11.7.jar:na]
+Caused by: java.lang.ClassCastException: java.lang.String cannot be cast to java.util.Date
+	at com.imaginea.EsUtils$$anonfun$1.apply(QuerySearch.scala:178) ~[classes/:na]
+	at com.imaginea.EsUtils$$anonfun$1.apply(QuerySearch.scala:173) ~[classes/:na]
+	at scala.collection.TraversableLike$$anonfun$map$1.apply(TraversableLike.scala:245) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.TraversableLike$$anonfun$map$1.apply(TraversableLike.scala:245) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.IndexedSeqOptimized$class.foreach(IndexedSeqOptimized.scala:33) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.mutable.ArrayOps$ofRef.foreach(ArrayOps.scala:186) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.TraversableLike$class.map(TraversableLike.scala:245) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.mutable.ArrayOps$ofRef.map(ArrayOps.scala:186) ~[scala-library-2.11.7.jar:na]
+	at com.imaginea.EsUtils$.shouldIndex(QuerySearch.scala:173) ~[classes/:na]
+	at controllers.Application$$anonfun$analyzeTweet$1.apply(Application.scala:15) ~[classes/:na]
+	at controllers.Application$$anonfun$analyzeTweet$1.apply(Application.scala:14) ~[classes/:na]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$17.apply(Action.scala:464) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$17.apply(Action.scala:464) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$16.apply(Action.scala:433) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$16.apply(Action.scala:432) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$.invokeBlock(Action.scala:556) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$.invokeBlock(Action.scala:555) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anon$1.apply(Action.scala:518) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4$$anonfun$apply$5.apply(Action.scala:130) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4$$anonfun$apply$5.apply(Action.scala:130) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.utils.Threads$.withContextClassLoader(Threads.scala:21) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4.apply(Action.scala:129) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4.apply(Action.scala:128) ~[play_2.11-2.3.8.jar:2.3.8]
+	at scala.Option.map(Option.scala:146) ~[scala-library-2.11.7.jar:na]
+	at play.api.mvc.Action$$anonfun$apply$1.apply(Action.scala:128) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1.apply(Action.scala:121) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.libs.iteratee.DoneIteratee$$anonfun$mapM$2.apply(Iteratee.scala:705) ~[play-iteratees_2.11-2.3.8.jar:2.3.8]
+	at play.api.libs.iteratee.DoneIteratee$$anonfun$mapM$2.apply(Iteratee.scala:705) ~[play-iteratees_2.11-2.3.8.jar:2.3.8]
+	at scala.concurrent.impl.Future$PromiseCompletingRunnable.liftedTree1$1(Future.scala:24) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Future$PromiseCompletingRunnable.run(Future.scala:24) [scala-library-2.11.7.jar:na]
+	... 6 common frames omitted
+
+2016-03-15 13:21:30,485 - [INFO] - from play in play-internal-execution-context-1 
+Application started (Dev)
+
+2016-03-15 13:21:30,725 - [ERROR] - from application in play-akka.actor.default-dispatcher-5 
+
+
+! @6pdlbblni - Internal server error, for (GET) [/analyze/tweet?terms=starbucks&terms=merck] ->
+
+play.api.Application$$anon$1: Execution exception[[ClassCastException: java.lang.String cannot be cast to java.util.Date]]
+	at play.api.Application$class.handleError(Application.scala:296) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.DefaultApplication.handleError(Application.scala:402) [play_2.11-2.3.8.jar:2.3.8]
+	at play.core.server.netty.PlayDefaultUpstreamHandler$$anonfun$14$$anonfun$apply$1.applyOrElse(PlayDefaultUpstreamHandler.scala:205) [play_2.11-2.3.8.jar:2.3.8]
+	at play.core.server.netty.PlayDefaultUpstreamHandler$$anonfun$14$$anonfun$apply$1.applyOrElse(PlayDefaultUpstreamHandler.scala:202) [play_2.11-2.3.8.jar:2.3.8]
+	at scala.runtime.AbstractPartialFunction.apply(AbstractPartialFunction.scala:36) [scala-library-2.11.7.jar:na]
+	at scala.util.Failure$$anonfun$recover$1.apply(Try.scala:216) [scala-library-2.11.7.jar:na]
+	at scala.util.Try$.apply(Try.scala:192) [scala-library-2.11.7.jar:na]
+	at scala.util.Failure.recover(Try.scala:216) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.Future$$anonfun$recover$1.apply(Future.scala:324) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.Future$$anonfun$recover$1.apply(Future.scala:324) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.CallbackRunnable.run(Promise.scala:32) [scala-library-2.11.7.jar:na]
+	at play.api.libs.iteratee.Execution$trampoline$.execute(Execution.scala:46) [play-iteratees_2.11-2.3.8.jar:2.3.8]
+	at scala.concurrent.impl.CallbackRunnable.executeWithValue(Promise.scala:40) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:248) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.Promise$class.complete(Promise.scala:55) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:153) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Future$PromiseCompletingRunnable.run(Future.scala:23) [scala-library-2.11.7.jar:na]
+	at akka.dispatch.TaskInvocation.run(AbstractDispatcher.scala:39) [akka-actor_2.11-2.4.2.jar:na]
+	at akka.dispatch.ForkJoinExecutorConfigurator$AkkaForkJoinTask.exec(AbstractDispatcher.scala:405) [akka-actor_2.11-2.4.2.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinTask.doExec(ForkJoinTask.java:260) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinPool$WorkQueue.runTask(ForkJoinPool.java:1339) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinPool.runWorker(ForkJoinPool.java:1979) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.forkjoin.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:107) [scala-library-2.11.7.jar:na]
+Caused by: java.lang.ClassCastException: java.lang.String cannot be cast to java.util.Date
+	at com.imaginea.EsUtils$$anonfun$1.apply(QuerySearch.scala:176) ~[classes/:na]
+	at com.imaginea.EsUtils$$anonfun$1.apply(QuerySearch.scala:172) ~[classes/:na]
+	at scala.collection.TraversableLike$$anonfun$map$1.apply(TraversableLike.scala:245) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.TraversableLike$$anonfun$map$1.apply(TraversableLike.scala:245) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.IndexedSeqOptimized$class.foreach(IndexedSeqOptimized.scala:33) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.mutable.ArrayOps$ofRef.foreach(ArrayOps.scala:186) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.TraversableLike$class.map(TraversableLike.scala:245) ~[scala-library-2.11.7.jar:na]
+	at scala.collection.mutable.ArrayOps$ofRef.map(ArrayOps.scala:186) ~[scala-library-2.11.7.jar:na]
+	at com.imaginea.EsUtils$.shouldIndex(QuerySearch.scala:172) ~[classes/:na]
+	at controllers.Application$$anonfun$analyzeTweet$1.apply(Application.scala:15) ~[classes/:na]
+	at controllers.Application$$anonfun$analyzeTweet$1.apply(Application.scala:14) ~[classes/:na]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$17.apply(Action.scala:464) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$17.apply(Action.scala:464) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$16.apply(Action.scala:433) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anonfun$apply$16.apply(Action.scala:432) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$.invokeBlock(Action.scala:556) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$.invokeBlock(Action.scala:555) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.ActionBuilder$$anon$1.apply(Action.scala:518) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4$$anonfun$apply$5.apply(Action.scala:130) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4$$anonfun$apply$5.apply(Action.scala:130) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.utils.Threads$.withContextClassLoader(Threads.scala:21) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4.apply(Action.scala:129) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1$$anonfun$apply$4.apply(Action.scala:128) ~[play_2.11-2.3.8.jar:2.3.8]
+	at scala.Option.map(Option.scala:146) ~[scala-library-2.11.7.jar:na]
+	at play.api.mvc.Action$$anonfun$apply$1.apply(Action.scala:128) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.mvc.Action$$anonfun$apply$1.apply(Action.scala:121) ~[play_2.11-2.3.8.jar:2.3.8]
+	at play.api.libs.iteratee.DoneIteratee$$anonfun$mapM$2.apply(Iteratee.scala:705) ~[play-iteratees_2.11-2.3.8.jar:2.3.8]
+	at play.api.libs.iteratee.DoneIteratee$$anonfun$mapM$2.apply(Iteratee.scala:705) ~[play-iteratees_2.11-2.3.8.jar:2.3.8]
+	at scala.concurrent.impl.Future$PromiseCompletingRunnable.liftedTree1$1(Future.scala:24) [scala-library-2.11.7.jar:na]
+	at scala.concurrent.impl.Future$PromiseCompletingRunnable.run(Future.scala:24) [scala-library-2.11.7.jar:na]
+	... 6 common frames omitted
+
+2016-03-15 13:26:25,827 - [INFO] - from play in play-internal-execution-context-1 
+Application started (Dev)
+
+2016-03-15 13:32:31,296 - [INFO] - from play in play-internal-execution-context-1 
 Application started (Dev)
 

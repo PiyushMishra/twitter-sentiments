@@ -1,6 +1,7 @@
 package com.imaginea
 
 import java.net.InetAddress
+import java.util.Date
 
 import akka.actor._
 import akka.routing.RoundRobinGroup
@@ -34,8 +35,8 @@ implicit val timeout = Timeout(50 minutes)
   val paths = ips.map(getRemoteActorPath(_)).toList
   val remoteRouter: ActorRef =
     actorSystem.actorOf(RoundRobinGroup(paths).props())
-  def process(terms: List[(String, String)], days: String) =  {
-    val future = terms.map(term => (remoteRouter ? QueryTwitter(term, days)).mapTo[TermWithCount])
+  def process(terms: List[(String, Date, Boolean)]) =  {
+    val future = terms.map(term => (remoteRouter ? QueryTwitter(term)).mapTo[TermWithCount])
     Future.sequence(future)
   }
 

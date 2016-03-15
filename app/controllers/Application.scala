@@ -11,20 +11,16 @@ object Application extends Controller {
     Ok(views.html.index("Your new application is ready."))
   }
 
-  def analyzeTweet = Action { request =>
-    println("Content : " + request.body.toString())
-    val json = request.body.asJson.get
-    val days = json \ "days"
-    val terms = (json \ "terms").as[List[String]]
-
+  def analyzeTweet(terms: List[String]) = Action {
     val termToBeUpdated = EsUtils.shouldIndex(terms)
-    val finalFuture = MasterApp.process(termToBeUpdated, days.as[String])
-    val list  = Await.result(finalFuture, 50 minutes)
-    println("got result  " + list)
-    Ok(JsonUtils.toJson(TermWithCounts(list)))
+    val finalFuture = MasterApp.process(termToBeUpdated)
+    //val list  = Await.result(finalFuture, 50 minutes)
+    println("Returning...")
+    Ok(terms.toString())
   }
 
   def searchTerm(term: String) = Action {
+    println("Get request...")
     Ok("term : " + term)
   }
 }
