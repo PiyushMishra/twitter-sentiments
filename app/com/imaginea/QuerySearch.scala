@@ -10,12 +10,14 @@ import akka.routing.RoundRobinPool
 import com.fasterxml.jackson.annotation.JsonValue
 import com.typesafe.config.ConfigFactory
 import org.elasticsearch.action.index.IndexRequest
+import org.elasticsearch.action.search.SearchType
 import org.elasticsearch.action.update.{UpdateResponse, UpdateRequest}
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.ImmutableSettings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.common.xcontent.XContentType
 import org.elasticsearch.index.query.QueryBuilders
+import org.json4s.jackson.JsonMethods._
 import twitter4j._
 
 import scala.collection.JavaConversions._
@@ -170,6 +172,24 @@ object EsUtils {
         convertToDate(hit.getSource.get("since").asInstanceOf[String]), false)
     }
     finalList.map(term => (term, new Date,true)) ++ terms
+  }
+  val rj = new RService()
+
+  def checkTerm(term: String): String= {
+    import org.elasticsearch.action.search.SearchType
+    import org.elasticsearch.index.query.QueryBuilders
+    val queryRequest = client.prepareSearch("tweetedterms").setSearchType(
+      SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termQuery("searchTerm", term))
+    val response = queryRequest.execute.actionGet
+    var wordJson =""
+    val terms = response.getHits.getHits.map { hit =>
+      if (!hit.getSource.get("queryStatus").asInstanceOf[String].equalsIgnoreCase("pending")) {
+      wordJson=  rj.generateWordCloud(term, esHost, esport).replaceAll("[","").
+        replaceAll("]","").replaceAll("String","").trim
+        EsUtils.client.prepareIndex("wordcloud", "typewordcloud").setSource(wordJson).execute()
+      }
+    }
+    wordJson
   }
 }
 
