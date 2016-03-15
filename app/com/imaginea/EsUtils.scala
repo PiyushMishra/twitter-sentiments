@@ -88,6 +88,7 @@ object EsUtils {
     val terms = response.getHits.getHits map { hit =>
       val updateRequest = new UpdateRequest()
       updateRequest.index("tweetedterms")
+      updateRequest.`type`("typetweetedterms")
       updateRequest.id(term)
       updateRequest.doc(jsonBuilder()
         .startObject()
@@ -100,7 +101,7 @@ object EsUtils {
 
     if(!terms.isEmpty) { terms(0) } else {
       val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
-      client.prepareIndex("tweetedterms","typetweetedterms").setSource(jsonBuilder()
+      client.prepareIndex("tweetedterms","typetweetedterms").setId(term).setSource(jsonBuilder()
         .startObject()
         .field("queryStatus", "pending")
         .field("searchTerm", term)
@@ -110,7 +111,7 @@ object EsUtils {
       (term, new Date, "newTerm")}
   }
 
-  def checkTerm(term: String): String= {
+  def createWordCount(term: String): String= {
     val queryRequest = client.prepareSearch("tweetedterms").setSearchType(
       SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termQuery("searchTerm", term))
     val response = queryRequest.execute.actionGet

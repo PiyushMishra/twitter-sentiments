@@ -22,13 +22,8 @@ public class RService {
     private static String wcScript = null;
 
     static{
-        String relativePath = "/home/sachint/work/twitter-sentiments/conf/RWC.R";
-        InputStream is = null;
-        try {
-            is = new FileInputStream(new File(relativePath));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        InputStream is = RService.class.getClassLoader().getResourceAsStream("RWC.R");
+
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         StringBuffer sb = new StringBuffer();
         String line = "";
@@ -44,10 +39,6 @@ public class RService {
 
         }
 
-    }
-
-    public static void main(String[] args) {
-        new RService().generateWordCloud("modi", "172.16.12.223", 9201);
     }
 
     public String generateWordCloud(String term, String host, int port) {
