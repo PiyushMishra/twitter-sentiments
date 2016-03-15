@@ -44,11 +44,6 @@ object QuerySearch extends TwitterInstance with App {
 
   def fetchAndSaveTweets(terms: (String, Date, String)): TermWithCount = {
     val (term, since, isNewTerm) = terms
-    if (isNewTerm.equalsIgnoreCase("newTerm")) {
-      indexTweetedTerms(term, "pending", since)
-    } else {
-        indexTweetedTerms(term, "refreshing", since)
-    }
     val bulkRequest = EsUtils.client.prepareBulk()
     var query = new Query(term).lang("en")
     query.setCount(100)
