@@ -25,4 +25,8 @@ object Application extends Controller {
   def getStatus = Action {
     Ok(EsUtils.getStatus)
   }
+
+  def getWordCloud(term:String) = Action {
+    Ok(EsUtils.getWordCloud(term))
+  }
 }

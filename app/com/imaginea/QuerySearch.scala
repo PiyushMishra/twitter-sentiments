@@ -40,7 +40,7 @@ object QuerySearch extends TwitterInstance {
     if(!next.isEmpty){
       query.setSince(next)
     }
-    
+
     var isFinal = false;
     val queryResult = twitter.search(query)
     if(queryResult.hasNext){
@@ -49,7 +49,7 @@ object QuerySearch extends TwitterInstance {
     } else{
       isFinal = true;
     }
-    
+
     var tweetCount = 0
     var recentTweet = false
     var createdAt = new Date
@@ -69,7 +69,7 @@ object QuerySearch extends TwitterInstance {
       val json = parse(tweetAsJson) merge (new JObject(List(("term", JString(term)), ("sentiment", JString(sentiment)))))
       bulkRequest.add(EsUtils.client.prepareIndex("twitter", "tweet").setSource(compact(json)))
     }
-    
+
     bulkRequest.execute()
     if (tweetCount == 0 && isNewTerm.equalsIgnoreCase("newTerm")) {
       EsUtils.client.prepareDelete("tweetedterms", "typetweetedterms", term).execute()
@@ -127,4 +127,8 @@ case class Tweet(text :String, sentiment:String, reTweetCount: Int, screenName: 
 
 case class Sentiments(sentimentsCount: Map[String, Long])
 
+case class Token(key : String, value : String)
+
 case class TermWithSentiments(term: String, totalCount: Int, tweets: List[Tweet], sentiments: Sentiments)
+
+case class TermsWithTokens(term : String, tokens : java.util.List[String])

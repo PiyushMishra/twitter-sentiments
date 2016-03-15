@@ -4,9 +4,11 @@
 
 # Home page
 GET     /                           controllers.Application.index
-GET /analyze/tweet      controllers.Application.analyzeTweet(term: String)
-GET /search/:term       controllers.Application.searchTerm(term:String)
-GET /status             controllers.Application.getStatus
+GET /tweet/analyze/tweet            controllers.Application.analyzeTweet(term: String)
+GET /tweet/search/:term             controllers.Application.searchTerm(term:String)
+GET /tweet/status/:term             controllers.Application.getStatus(term:String)
+GET /tweet/wordCloud/:term          controllers.Application.getWordCloud(term:String)
+
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
