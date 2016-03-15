@@ -36,8 +36,8 @@ implicit val timeout = Timeout(50 minutes)
   val remoteRouter: ActorRef =
     actorSystem.actorOf(RoundRobinGroup(paths).props())
 
-  def process(terms: List[(String, Date, Boolean)]) =  {
-    val future = terms.map(term => (remoteRouter ? QueryTwitter(term)).mapTo[TermWithCount])
+  def process(term: (String, Date, String)) =  {
+    val future = List(term).map(term => (remoteRouter ? QueryTwitter(term)).mapTo[TermWithCount])
     Future.sequence(future)
   }
 

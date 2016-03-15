@@ -1,21 +1,14 @@
 package com.imaginea
 
 import java.net.InetAddress
-import java.text.{ParseException, SimpleDateFormat}
-import java.util.{Locale, Date}
-import java.util.concurrent.TimeUnit
+import java.text.SimpleDateFormat
+import java.util.Date
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.routing.RoundRobinPool
-import com.fasterxml.jackson.annotation.JsonValue
 import com.typesafe.config.ConfigFactory
 import org.elasticsearch.action.index.IndexRequest
-import org.elasticsearch.action.update.{UpdateResponse, UpdateRequest}
-import org.elasticsearch.client.transport.TransportClient
-import org.elasticsearch.common.settings.ImmutableSettings
-import org.elasticsearch.common.transport.InetSocketTransportAddress
-import org.elasticsearch.common.xcontent.XContentType
-import org.elasticsearch.index.query.QueryBuilders
+import org.elasticsearch.action.update.{UpdateRequest, UpdateResponse}
 import twitter4j._
 
 import scala.collection.JavaConversions._
@@ -49,9 +42,9 @@ object QuerySearch extends TwitterInstance with App {
       Runtime.getRuntime.availableProcessors()).props(Props[TwitterQueryFetcher]), "router")
 
 
-  def fetchAndSaveTweets(terms: (String, Date, Boolean)): TermWithCount = {
+  def fetchAndSaveTweets(terms: (String, Date, String)): TermWithCount = {
     val (term, since, isNewTerm) = terms
-    if (isNewTerm) {
+    if (isNewTerm.equalsIgnoreCase("newTerm")) {
       indexTweetedTerms(term, "pending", since)
     } else {
         indexTweetedTerms(term, "refreshing", since)
@@ -60,7 +53,7 @@ object QuerySearch extends TwitterInstance with App {
     var query = new Query(term).lang("en")
     query.setCount(100)
 
-    if (!isNewTerm) {
+    if (!isNewTerm.equalsIgnoreCase("newTerm")) {
       val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       query.setSince(sdf.format(since))
     }
@@ -90,7 +83,7 @@ object QuerySearch extends TwitterInstance with App {
       queryResult = twitter.search(query)
     }
     bulkRequest.execute()
-    if (tweetCount == 0 && isNewTerm) {
+    if (tweetCount == 0 && isNewTerm.equalsIgnoreCase("newTerm")) {
       EsUtils.client.prepareDelete("tweetedterms", "typetweetedterms", term).execute()
     } else {
       indexTweetedTerms(term, "done", createdAt)
@@ -101,8 +94,11 @@ object QuerySearch extends TwitterInstance with App {
 
   def indexTweetedTerms(term: String, status: String, createdAt: Date): UpdateResponse = {
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    val indexRequest = new IndexRequest("tweetedterms", "typetweetedterms", term).source(JsonUtils.toJson(TweetedTerms(term, status, sdf.format(new Date), sdf.format(createdAt))))
-    val updateRequest = new UpdateRequest("tweetedterms", "typetweetedterms", term).doc(JsonUtils.toJson(TweetedTerms(term, status, sdf.format(new Date), sdf.format(createdAt)))).upsert(indexRequest)
+    val indexRequest = new IndexRequest("tweetedterms", "typetweetedterms", term).
+      source(JsonUtils.toJson(TweetedTerms(term, status, sdf.format(new Date), sdf.format(createdAt))))
+    val updateRequest = new UpdateRequest("tweetedterms", "typetweetedterms", term).
+      doc(JsonUtils.toJson(TweetedTerms(term, status, sdf.format(new Date),
+        sdf.format(createdAt)))).upsert(indexRequest)
     EsUtils.client.update(updateRequest).get()
   }
 }
@@ -124,60 +120,21 @@ object JsonUtils {
   }
 }
 
-object EsUtils {
 
-  val esConfig = ConfigFactory.load("querySearch.conf")
-  val esHost = esConfig.getString("es.ip")
-  val esport = esConfig.getString("es.port").toInt
-  val clusterName = esConfig.getString("es.cluster.name")
-  val transportClient = new TransportClient(ImmutableSettings.settingsBuilder().put("cluster.name", clusterName).put("client.transport.sniff", true).build())
-  val client = transportClient.addTransportAddress(new InetSocketTransportAddress(esHost, esport))
-
-  def shouldIndex2(term: List[String]) = {
-    var finalList = term
-    import org.elasticsearch.action.search.SearchType;
-    import org.elasticsearch.index.query.QueryBuilders
-    val response = client.prepareSearch("tweetedterms").setSearchType(SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termsQuery("terms", term)).execute().actionGet()
-
-    for (hit <- response.getHits.getHits) {
-      val lastUpdated = hit.getSource.get("last_updated").asInstanceOf[java.util.Date]
-      val currentDate = new Date()
-      val diff = currentDate.getTime() - lastUpdated.getTime()
-      if (TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS) < 7 || "pending".
-        equalsIgnoreCase(hit.getSource.get("queryStatus").asInstanceOf[String]))
-        finalList = finalList.drop(term.indexOf(hit.getSource.get("term").asInstanceOf[String]))
-    }
-    finalList
-  }
-
-
-  def convertToDate(dateString: String) = {
-    val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
-    format.parse(dateString);
-  }
-
-  def shouldIndex(term: List[String]): List[(String, Date, Boolean)] = {
-    import scala.collection.JavaConverters._
-    var finalList = term
-    import org.elasticsearch.action.search.SearchType;
-    import org.elasticsearch.index.query.QueryBuilders
-    val queryRequest = client.prepareSearch("tweetedterms").setSearchType(
-      SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termsQuery("searchTerm", term.asJava))
-    val response = queryRequest.execute.actionGet
-    val terms = response.getHits.getHits.map { hit =>
-      finalList = finalList diff List(hit.getSource.get("searchTerm").asInstanceOf[String])
-      (hit.getSource.get("searchTerm").asInstanceOf[String],
-        convertToDate(hit.getSource.get("since").asInstanceOf[String]), false)
-    }
-    finalList.map(term => (term, new Date,true)) ++ terms
-  }
-}
-
-
-case class QueryTwitter(term: (String, Date, Boolean))
+case class QueryTwitter(term: (String, Date, String))
 
 case class TermWithCount(term: String, count: Int)
 
 case class TermWithCounts(terms: List[TermWithCount])
 
 case class TweetedTerms(searchTerm: String, queryStatus: String, lastUpdated: String, since: String)
+
+case class TermStatus(term:String, status: String)
+
+case class TermWithStatus(termWithStatus : List[TermStatus])
+
+case class Tweet(text :String, sentiment:String, reTweetCount: Int, screenName: String)
+
+case class Sentiments(sentimentsCount: Map[String, Long])
+
+case class TermWithSentiments(term: String, totalCount: Int, tweets: List[Tweet], sentiments: Sentiments)

@@ -11,16 +11,17 @@ object Application extends Controller {
     Ok(views.html.index("Your new application is ready."))
   }
 
-  def analyzeTweet(terms: List[String]) = Action {
-    val termToBeUpdated = EsUtils.shouldIndex(terms)
-    val finalFuture = MasterApp.process(termToBeUpdated)
-    //val list  = Await.result(finalFuture, 50 minutes)
-    println("Returning...")
-    Ok(terms.toString())
+  def analyzeTweet(term: String) = Action {
+    val termToBeUpdated = EsUtils.shouldIndex(term)
+    MasterApp.process(termToBeUpdated)
+    Ok(term)
   }
 
   def searchTerm(term: String) = Action {
-    println("Get request...")
-    Ok("term : " + term)
+    Ok(EsUtils.getTermWithSentiments(term))
+  }
+
+  def getStatus = Action {
+    Ok(EsUtils.getStatus)
   }
 }
