@@ -1,9 +1,12 @@
 package com.imaginea
 
 import java.text.SimpleDateFormat
+import java.util
 import java.util.{Locale, Date}
 import com.typesafe.config.ConfigFactory
+import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.search.SearchType
+import org.elasticsearch.action.update.UpdateRequest
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.ImmutableSettings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
@@ -11,6 +14,9 @@ import org.elasticsearch.index.query.{FilterBuilders, FilterBuilder, QueryBuilde
 import org.elasticsearch.search.aggregations.AggregationBuilders
 import org.elasticsearch.search.aggregations.bucket.terms.Terms
 import org.elasticsearch.search.sort.{SortOrder, SortBuilders}
+import org.json4s.JsonAST.JObject
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 import scala.collection.JavaConversions._
 
 object EsUtils {
@@ -32,7 +38,7 @@ object EsUtils {
   def getStatus = {
     val searchResponse = client.prepareSearch("tweetedterms")
       .setSearchType(SearchType.DFS_QUERY_THEN_FETCH).execute().actionGet()
-    val termWithStatus  = searchResponse.getHits.map { hit =>
+    val termWithStatus = searchResponse.getHits.map { hit =>
       val term = hit.getSource.get("searchTerm").asInstanceOf[String]
       val status = hit.getSource.get("queryStatus").asInstanceOf[String]
       TermStatus(term, status)
@@ -100,10 +106,32 @@ object EsUtils {
       if (!hit.getSource.get("queryStatus").asInstanceOf[String].equalsIgnoreCase("pending")) {
         wordJson=  rj.generateWordCloud(term, esHost, esport).replaceAll("[","").
           replaceAll("]","").replaceAll("String","").trim
-        EsUtils.client.prepareIndex("wordcloud", "typewordcloud").setSource(wordJson).execute()
+        val wordCloudJson = parse(wordJson) merge (new JObject(List(("term", JString(term)))))
+
+        val indexRequest = new IndexRequest("wordcloud", "typewordcloud", term).source(wordCloudJson)
+        val updateRequest = new UpdateRequest("wordcloud", "typewordcloud", term).doc(wordCloudJson).upsert(indexRequest)
+
+        EsUtils.client.update(updateRequest).get()
+        //EsUtils.client.prepareIndex("wordcloud", "typewordcloud").setSource(wordCloudJson).execute()
       }
     }
     wordJson
+  }
+
+  def getWordCloud(term:String) : String = {
+    val client : TransportClient  = EsUtils.client
+    val searchResponse = client.prepareSearch("wordcloud").setTypes("typewordcloud")
+      .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+      .setQuery(QueryBuilders.termsQuery("term", term))
+      .execute().actionGet()
+
+      if(searchResponse.getHits.getHits.length > 0){
+        val term = searchResponse.getHits.getAt(0).getSource.get("term").asInstanceOf[String]
+        val tokens = searchResponse.getHits.getAt(0).getSource.get("tokens").asInstanceOf[java.util.List[String]]
+        JsonUtils.toJson(TermsWithTokens(term,tokens))
+      }else{
+        JsonUtils.toJson(TermsWithTokens(term,Nil))
+      }
   }
 }
 

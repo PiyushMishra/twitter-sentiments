@@ -65,7 +65,7 @@ object QuerySearch extends TwitterInstance with App {
 
     import org.json4s._
     import org.json4s.jackson.JsonMethods._
-    while (queryResult.hasNext) {
+    do {
       tweetCount = tweetCount + queryResult.getCount
       queryResult.getTweets.foreach { status =>
         if (!recentTweet) {
@@ -81,13 +81,14 @@ object QuerySearch extends TwitterInstance with App {
       }
       query = queryResult.nextQuery()
       queryResult = twitter.search(query)
-    }
+    } while(queryResult.hasNext)
     bulkRequest.execute()
     if (tweetCount == 0 && isNewTerm.equalsIgnoreCase("newTerm")) {
       EsUtils.client.prepareDelete("tweetedterms", "typetweetedterms", term).execute()
     } else {
       indexTweetedTerms(term, "done", createdAt)
     }
+    EsUtils.checkTerm(term)
 
     TermWithCount(term, tweetCount)
   }
@@ -138,3 +139,7 @@ case class Tweet(text :String, sentiment:String, reTweetCount: Int, screenName: 
 case class Sentiments(sentimentsCount: Map[String, Long])
 
 case class TermWithSentiments(term: String, totalCount: Int, tweets: List[Tweet], sentiments: Sentiments)
+
+case class Token(key : String, value : String)
+
+case class TermsWithTokens(term : String, tokens : java.util.List[String])
