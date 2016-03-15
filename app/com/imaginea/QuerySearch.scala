@@ -26,9 +26,9 @@ trait TwitterInstance {
   val twitter = new TwitterFactory(ConfigurationBuilderUtil.buildConfiguration).getInstance()
 }
 
+object QuerySearch extends TwitterInstance with App {
 
-object QuerySearch extends TwitterInstance {
-
+  val sentimentUtil : SentimentAnalysis = new StandfordSentimentImpl
   def configString = s"""akka {
                         |  actor {
                         |    provider = "akka.remote.RemoteActorRefProvider"
@@ -37,6 +37,7 @@ object QuerySearch extends TwitterInstance {
                         |    enabled-transports = ["akka.remote.netty.tcp"]
                         |    netty.tcp {
                         |      hostname = ${InetAddress.getLocalHost.getHostAddress()}
+<<<<<<< HEAD
                         |      port = 2552
                         |    }
                         |  }
@@ -48,8 +49,6 @@ object QuerySearch extends TwitterInstance {
     actorSystem.actorOf(RoundRobinPool(2 *
       Runtime.getRuntime.availableProcessors()).props(Props[TwitterQueryFetcher]), "router")
 
-  def main(args: Array[String]): Unit = {
-  }
 
   def fetchAndSaveTweets(terms: (String, Date, Boolean)): TermWithCount = {
     val (term, since, isNewTerm) = terms
@@ -84,7 +83,7 @@ object QuerySearch extends TwitterInstance {
         val tweetAsJson = TwitterObjectFactory.getRawJSON(status)
         val tmpDoc1 = status.getText.replaceAll("[^\\u0009\\u000a\\u000d\\u0020-\\uD7FF\\uE000-\\uFFFD]", "")
         val tmpDoc2 = tmpDoc1.replaceAll("[\\uD83D\\uFFFD\\uFE0F\\u203C\\u3010\\u3011\\u300A\\u166D\\u200C\\u202A\\u202C\\u2049\\u20E3\\u300B\\u300C\\u3030\\u065F\\u0099\\u0F3A\\u0F3B\\uF610\\uFFFC\\u20B9\\uFE0F]", "");
-        val sentiment = SentimentAnalysisUtils.detectSentiment(tmpDoc2)
+        val sentiment = sentimentUtil.detectSentiment(tmpDoc2)
         val json = parse(tweetAsJson) merge (new JObject(List(("term", JString(term)), ("sentiment", JString(sentiment)))))
         bulkRequest.add(EsUtils.client.prepareIndex("twitter", "tweet").setSource(compact(json)))
       }
@@ -108,14 +107,6 @@ object QuerySearch extends TwitterInstance {
     EsUtils.client.update(updateRequest).get()
   }
 }
-
-case class QueryTwitter(term: (String, Date, Boolean))
-
-case class TermWithCount(term: String, count: Int)
-
-case class TermWithCounts(terms: List[TermWithCount])
-
-case class TweetedTerms(searchTerm: String, queryStatus: String, lastUpdated: String, since: String)
 
 class TwitterQueryFetcher extends Actor {
   override def receive: Receive = {
@@ -166,45 +157,28 @@ object EsUtils {
     format.parse(dateString);
   }
 
-
-  def shouldIndex2(term: List[String]): List[(String, Date, Boolean)] = {
-    import scala.collection.JavaConverters._
-    var finalList = term
-    import org.elasticsearch.action.search.SearchType;
-    import org.elasticsearch.index.query.QueryBuilders
-    val queryRequest = client.prepareSearch("tweetedterms").
-      setSearchType(SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termsQuery("searchTerm", term.asJava))
-    val response = queryRequest.execute.actionGet
-    val terms = response.getHits.getHits.map { hit =>
-      finalList = finalList diff List(hit.getSource.get("searchTerm").asInstanceOf[String])
-      // println(hit.getSource.get("searchTerm").asInstanceOf[String] + " :: MAPPING :: " +
-      //  hit.getSource.get("since").asInstanceOf[String])
-      new Date()
-      (hit.getSource.get("searchTerm").asInstanceOf[String],convertToDate(hit.getSource.get("since").asInstanceOf[String]), false)
-    }
-    val a = finalList.map(term => (term, new Date,true)) ++ terms
-    println(a)
-    a
-  }
-
   def shouldIndex(term: List[String]): List[(String, Date, Boolean)] = {
     import scala.collection.JavaConverters._
     var finalList = term
     import org.elasticsearch.action.search.SearchType;
     import org.elasticsearch.index.query.QueryBuilders
-    val queryRequest = client.prepareSearch("tweetedterms").
-      setSearchType(SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termsQuery("searchTerm", term.asJava))
+    val queryRequest = client.prepareSearch("tweetedterms").setSearchType(
+      SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termsQuery("searchTerm", term.asJava))
     val response = queryRequest.execute.actionGet
     val terms = response.getHits.getHits.map { hit =>
       finalList = finalList diff List(hit.getSource.get("searchTerm").asInstanceOf[String])
-     // println(hit.getSource.get("searchTerm").asInstanceOf[String] + " :: MAPPING :: " +
-      //  hit.getSource.get("since").asInstanceOf[String])
-      new Date()
       (hit.getSource.get("searchTerm").asInstanceOf[String],
         convertToDate(hit.getSource.get("since").asInstanceOf[String]), false)
     }
-    val a = finalList.map(term => (term, new Date,true)) ++ terms
-    println(a)
-    a
+    finalList.map(term => (term, new Date,true)) ++ terms
   }
 }
+
+
+case class QueryTwitter(term: (String, Date, Boolean))
+
+case class TermWithCount(term: String, count: Int)
+
+case class TermWithCounts(terms: List[TermWithCount])
+
+case class TweetedTerms(searchTerm: String, queryStatus: String, lastUpdated: String, since: String)

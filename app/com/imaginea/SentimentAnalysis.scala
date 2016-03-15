@@ -1,11 +1,5 @@
 package com.imaginea
 
-import com.imaginea.SentimentAnalysisUtils.SENTIMENT_TYPE
-import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
-import scala.collection.Map
-import akka.actor.Actor
-
 /**
  * Created by piyushm on 9/3/16.
  */
@@ -20,8 +14,12 @@ import edu.stanford.nlp.sentiment.SentimentCoreAnnotations
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
+trait SentimentAnalysis {
+  def detectSentiment(text: String) : String
+}
 
-object SentimentAnalysisUtils {
+
+class StandfordSentimentImpl extends  SentimentAnalysis{
   val nlpProps = {
     val props = new Properties()
     props.setProperty("annotators", "tokenize, ssplit, pos, lemma, parse, sentiment")
@@ -30,8 +28,8 @@ object SentimentAnalysisUtils {
 
   val pipeline = new StanfordCoreNLP(nlpProps)
 
-  def detectSentiment(message: String): String = {
-    val annotation = pipeline.process(message)
+  def detectSentiment(text: String): String = {
+    val annotation = pipeline.process(text)
     var sentiments: ListBuffer[Double] = ListBuffer()
     var sizes: ListBuffer[Int] = ListBuffer()
 
@@ -84,53 +82,5 @@ object SentimentAnalysisUtils {
     }
 
   }
-
-  trait SENTIMENT_TYPE
-  case object VERY_NEGATIVE extends SENTIMENT_TYPE
-  case object NEGATIVE extends SENTIMENT_TYPE
-  case object NEUTRAL extends SENTIMENT_TYPE
-  case object POSITIVE extends SENTIMENT_TYPE
-  case object VERY_POSITIVE extends SENTIMENT_TYPE
-  case object NOT_UNDERSTOOD extends SENTIMENT_TYPE
-
 }
 
-/*
-class SentimentCalculater extends Actor
-{
-  def receive : Receive = {
-    case text: String =>
-      val tmpDoc1 = text.replaceAll("[^\\u0009\\u000a\\u000d\\u0020-\\uD7FF\\uE000-\\uFFFD]", "");
-      // remove other unicode characters coreNLP can't handle
-      val tmpDoc2 = tmpDoc1.replaceAll("[\\uD83D\\uFFFD\\uFE0F\\u203C\\u3010\\u3011\\u300A\\u166D\\u200C\\u202A\\u202C\\u2049\\u20E3\\u300B\\u300C\\u3030\\u065F\\u0099\\u0F3A\\u0F3B\\uF610\\uFFFC\\u20B9\\uFE0F]", "");
-      val sentiment = SentimentAnalysisUtils.detectSentiment(tmpDoc2)
-      TweetSentiments(text, sentiment)
-    case _ => println("i did not understood the msg")
-  }
-}*/
-
-object SentimentAnalysis {
-
-  def main(args: Array[String]) {
-    val conf = new SparkConf().setAppName("Twitter")
-    conf.set("esNodesKey", args(0))
-    conf.set("esPortKey", args(1))
-
-    import org.elasticsearch.spark._
-    val sc: SparkContext = new SparkContext(conf)
-
-    val wordCount: RDD[TweetWithSentiments] = sc.esRDD("twitter/tweet").
-      map { case (_, tweet) =>
-        val m: Map[String, AnyRef] = tweet
-        val text = tweet.get("text").filter(_ != "").get.asInstanceOf[String]
-        val sentiment = SentimentAnalysisUtils.detectSentiment(text)
-        TweetWithSentiments(tweet.seq, sentiment)
-    }
-
-    wordCount.saveToEs("sentiment/typesentiment")
-    sc.stop()
-  }
-
-}
-
-case class TweetWithSentiments(originalTweet: Map[String, AnyRef], sentiment: String)
