@@ -2,6 +2,7 @@ library("tm")
 library("wordcloud")
 library("slam")
 library("topicmodels")
+library("rjson")
 #Load Text
 tweets <- Search(index = "twitter", type = "tweet", field="text", q=paste("term:", term), size=9999999)$hits$hits
 
@@ -44,4 +45,4 @@ library(RColorBrewer)
 mTDM <- as.matrix(CorpusObj.tdm)
 v <- sort(rowSums(mTDM),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
-head(v, 50)
+toJSON(head(v, 50), "C")

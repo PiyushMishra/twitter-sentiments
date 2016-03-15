@@ -17,6 +17,7 @@ import org.elasticsearch.common.settings.ImmutableSettings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.common.xcontent.XContentType
 import org.elasticsearch.index.query.QueryBuilders
+import org.json4s.jackson.JsonMethods._
 import twitter4j._
 
 import scala.collection.JavaConversions._
@@ -183,7 +184,9 @@ object EsUtils {
     var wordJson =""
     val terms = response.getHits.getHits.map { hit =>
       if (!hit.getSource.get("queryStatus").asInstanceOf[String].equalsIgnoreCase("pending")) {
-      wordJson=  rj.generateWordCloud(term, esHost, esport)
+      wordJson=  rj.generateWordCloud(term, esHost, esport).replaceAll("[","").
+        replaceAll("]","").replaceAll("String","").trim
+        EsUtils.client.prepareIndex("wordcloud", "typewordcloud").setSource(wordJson).execute()
       }
     }
     wordJson

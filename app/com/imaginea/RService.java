@@ -8,12 +8,8 @@ import org.rosuda.JRI.RVector;
 import org.rosuda.JRI.Rengine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import play.Play;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Enumeration;
 
 /**
@@ -26,8 +22,13 @@ public class RService {
     private static String wcScript = null;
 
     static{
-        String relativePath = "/path/to/my/file";
-        InputStream is = Play.application().resourceAsStream(relativePath);
+        String relativePath = "/home/sachint/work/twitter-sentiments/conf/RWC.R";
+        InputStream is = null;
+        try {
+            is = new FileInputStream(new File(relativePath));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         StringBuffer sb = new StringBuffer();
         String line = "";
@@ -39,6 +40,8 @@ public class RService {
             wcScript = sb.toString();
         } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+
         }
 
     }
@@ -53,6 +56,7 @@ public class RService {
         sb.append("term <- \"" + term + "\" \n");
         sb.append(wcScript);
         REXP exp = evaluateScript(sb.toString());
+        System.out.println(exp);
         return exp.toString();
     }
 
@@ -68,7 +72,6 @@ public class RService {
         for (String line: scriptLines.split("\n")) {
             exp = re.eval(line);
         }
-
         if(exp != null){
             return exp;
         }
