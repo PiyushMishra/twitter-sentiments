@@ -37,7 +37,6 @@ object QuerySearch extends TwitterInstance with App {
                         |    enabled-transports = ["akka.remote.netty.tcp"]
                         |    netty.tcp {
                         |      hostname = ${InetAddress.getLocalHost.getHostAddress()}
-<<<<<<< HEAD
                         |      port = 2552
                         |    }
                         |  }
