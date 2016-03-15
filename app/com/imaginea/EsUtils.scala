@@ -1,16 +1,20 @@
 package com.imaginea
 
 import java.text.SimpleDateFormat
-import java.util.{Locale, Date}
+import java.util.{Date, Locale}
+
 import com.typesafe.config.ConfigFactory
 import org.elasticsearch.action.search.SearchType
+import org.elasticsearch.action.update.UpdateRequest
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.ImmutableSettings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
-import org.elasticsearch.index.query.{FilterBuilders, FilterBuilder, QueryBuilders}
+import org.elasticsearch.common.xcontent.XContentFactory._
+import org.elasticsearch.index.query.{FilterBuilders, QueryBuilders}
 import org.elasticsearch.search.aggregations.AggregationBuilders
 import org.elasticsearch.search.aggregations.bucket.terms.Terms
-import org.elasticsearch.search.sort.{SortOrder, SortBuilders}
+import org.elasticsearch.search.sort.{SortBuilders, SortOrder}
+
 import scala.collection.JavaConversions._
 
 object EsUtils {
@@ -25,8 +29,8 @@ object EsUtils {
   val client = transportClient.addTransportAddress(new InetSocketTransportAddress(esHost, esport))
 
   def convertToDate(dateString: String) = {
-    val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
-    format.parse(dateString);
+    val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
+    format.parse(dateString)
   }
 
   def getStatus = {
@@ -78,17 +82,32 @@ object EsUtils {
   }
 
   def shouldIndex(term: String): (String, Date, String) = {
-    import org.elasticsearch.action.search.SearchType
-    import org.elasticsearch.index.query.QueryBuilders
     val queryRequest = client.prepareSearch("tweetedterms").setSearchType(
       SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termQuery("searchTerm", term))
     val response = queryRequest.execute.actionGet
     val terms = response.getHits.getHits map { hit =>
+      val updateRequest = new UpdateRequest()
+      updateRequest.index("tweetedterms")
+      updateRequest.id(term)
+      updateRequest.doc(jsonBuilder()
+        .startObject()
+        .field("queryStatus", "refreshing")
+        .endObject())
+      client.update(updateRequest).get()
       (hit.getSource.get("searchTerm").asInstanceOf[String],
         convertToDate(hit.getSource.get("since").asInstanceOf[String]), "termExists")
     }
 
-    if(!terms.isEmpty) { terms(0) } else {(term, new Date, "newTerm")}
+    if(!terms.isEmpty) { terms(0) } else {
+      val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
+      client.prepareIndex("tweetedterms","typetweetedterms").setSource(jsonBuilder()
+        .startObject()
+        .field("queryStatus", "pending")
+        .field("searchTerm", term)
+        .field("lastUpdated",format.format(new Date) )
+        .field("since",format.format(new Date))
+        .endObject()).execute()
+      (term, new Date, "newTerm")}
   }
 
   def checkTerm(term: String): String= {
