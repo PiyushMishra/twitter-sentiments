@@ -12,11 +12,10 @@ import org.elasticsearch.search.aggregations.AggregationBuilders
 import org.elasticsearch.search.aggregations.bucket.terms.Terms
 import org.elasticsearch.search.sort.{SortOrder, SortBuilders}
 import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 object EsUtils {
 
+  val rj = new RService()
   val esConfig = ConfigFactory.load("querySearch.conf")
   val esHost = esConfig.getString("es.ip")
   val esport = esConfig.getString("es.port").toInt
@@ -91,4 +90,20 @@ object EsUtils {
 
     if(!terms.isEmpty) { terms(0) } else {(term, new Date, "newTerm")}
   }
+
+  def checkTerm(term: String): String= {
+    val queryRequest = client.prepareSearch("tweetedterms").setSearchType(
+      SearchType.DFS_QUERY_THEN_FETCH).setQuery(QueryBuilders.termQuery("searchTerm", term))
+    val response = queryRequest.execute.actionGet
+    var wordJson =""
+    val terms = response.getHits.getHits.map { hit =>
+      if (!hit.getSource.get("queryStatus").asInstanceOf[String].equalsIgnoreCase("pending")) {
+        wordJson=  rj.generateWordCloud(term, esHost, esport).replaceAll("[","").
+          replaceAll("]","").replaceAll("String","").trim
+        EsUtils.client.prepareIndex("wordcloud", "typewordcloud").setSource(wordJson).execute()
+      }
+    }
+    wordJson
+  }
 }
+
