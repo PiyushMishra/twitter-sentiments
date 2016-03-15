@@ -27,19 +27,28 @@ trait TwitterInstance {
 }
 
 
-object QuerySearch extends TwitterInstance {
-  def configString =
-    s"""akka {|  actor {|    provider = "akka.remote.RemoteActorRefProvider"|  }|  remote {|    enabled-transports = ["akka.remote.netty.tcp"]|    netty.tcp {|      hostname = ${InetAddress.getLocalHost.getHostAddress()}|      port = 2552|    }|  }|}""".stripMargin
+object QuerySearch extends TwitterInstance with App {
+
+  val sentimentUtil : SentimentAnalysis = new StandfordSentimentImpl
+
+  def configString = s"""akka {
+                        |  actor {
+                        |    provider = "akka.remote.RemoteActorRefProvider"
+                        |  }
+                        |  remote {
+                        |    enabled-transports = ["akka.remote.netty.tcp"]
+                        |    netty.tcp {
+                        |      hostname = ${InetAddress.getLocalHost.getHostAddress()}
+      |      port = 2552
+      |    }
+      |  }
+      |}""".stripMargin
 
   val config = ConfigFactory.parseString(configString)
   val actorSystem = ActorSystem("twitter", config)
   val router: ActorRef =
     actorSystem.actorOf(RoundRobinPool(2 *
       Runtime.getRuntime.availableProcessors()).props(Props[TwitterQueryFetcher]), "router")
-
-  def main(args: Array[String]): Unit = {
-  }
-
 
   def fetchAndSaveTweets(terms: (String, String), days: String): TermWithCount = {
     val (term, since) = terms
@@ -75,7 +84,7 @@ object QuerySearch extends TwitterInstance {
         val tweetAsJson = TwitterObjectFactory.getRawJSON(status)
         val tmpDoc1 = status.getText.replaceAll("[^\\u0009\\u000a\\u000d\\u0020-\\uD7FF\\uE000-\\uFFFD]", "")
         val tmpDoc2 = tmpDoc1.replaceAll("[\\uD83D\\uFFFD\\uFE0F\\u203C\\u3010\\u3011\\u300A\\u166D\\u200C\\u202A\\u202C\\u2049\\u20E3\\u300B\\u300C\\u3030\\u065F\\u0099\\u0F3A\\u0F3B\\uF610\\uFFFC\\u20B9\\uFE0F]", "");
-        val sentiment = SentimentAnalysisUtils.detectSentiment(tmpDoc2)
+        val sentiment = sentimentUtil.detectSentiment(tmpDoc2)
         val json = parse(tweetAsJson) merge (new JObject(List(("term", JString(term)), ("sentiment", JString(sentiment)))))
         bulkRequest.add(EsUtils.client.prepareIndex("twitter", "tweet").setSource(compact(json)))
       }
@@ -100,13 +109,6 @@ object QuerySearch extends TwitterInstance {
   }
 }
 
-case class QueryTwitter(term: (String, String), days: String)
-
-case class TermWithCount(term: String, count: Int)
-
-case class TermWithCounts(terms: List[TermWithCount])
-
-case class TweetedTerms(searchTerm: String, queryStatus: String, lastUpdated: String, since: String)
 
 class TwitterQueryFetcher extends Actor {
   override def receive: Receive = {
@@ -161,7 +163,7 @@ object EsUtils {
 //    println(queryRequest.toString)
     val response = queryRequest.execute.actionGet
     val terms = response.getHits.getHits.map { hit =>
-      finalList = finalList.drop(term.indexOf(hit.getSource.get("SearchTerm").asInstanceOf[String]))
+      finalList = finalList.drop(term.indexOf(hit.getSource.get("s0earchTerm").asInstanceOf[String]))
       println("finalList : " + finalList)
      // println(hit.getSource.get("searchTerm").asInstanceOf[String] + " :: MAPPING :: " +
       //  hit.getSource.get("since").asInstanceOf[String])
@@ -172,3 +174,12 @@ object EsUtils {
     a
   }
 }
+
+
+case class QueryTwitter(term: (String, String), days: String)
+
+case class TermWithCount(term: String, count: Int)
+
+case class TermWithCounts(terms: List[TermWithCount])
+
+case class TweetedTerms(searchTerm: String, queryStatus: String, lastUpdated: String, since: String)
